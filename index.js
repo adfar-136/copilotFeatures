@@ -17,15 +17,32 @@ mongoose.connect('mongodb://localhost:27017/copilotagentic', {
 }).then(() => console.log('Connected to MongoDB')).catch(err => console.error(err));
 
 app.post('/register', async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashedPassword });
-    await user.save();
-    res.status(201).send('User registered successfully');
-  } catch (err) {
-    res.status(500).send('Error registering user');
-  }
+    try {
+        const { name, email, password } = req.body;
+
+        // Validate input
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(409).json({ error: 'User already exists' });
+        }
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create and save the user
+        const user = new User({ name, email, password: hashedPassword });
+        await user.save();
+
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error registering user' });
+    }
 });
 
 app.post('/login', async (req, res) => {
